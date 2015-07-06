@@ -15,6 +15,9 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\HttpKernel\DataCollector\Util\ValueExporter;
 use Symfony\Component\Validator\ConstraintViolationInterface;
+use Symfony\Component\VarDumper\Cloner\ClonerInterface;
+use Symfony\Component\VarDumper\Cloner\VarCloner;
+use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 
 /**
  * Default implementation of {@link FormDataExtractorInterface}.
@@ -25,16 +28,24 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
 class FormDataExtractor implements FormDataExtractorInterface
 {
     /**
-     * @var ValueExporter
+     * @var ClonerInterface
      */
-    private $valueExporter;
+    private $cloner;
 
     /**
      * Constructs a new data extractor.
+     *
+     * @param ClonerInterface $cloner
      */
-    public function __construct(ValueExporter $valueExporter = null)
+    public function __construct($cloner = null)
     {
-        $this->valueExporter = $valueExporter ?: new ValueExporter();
+        if ($cloner instanceof ValueExporter) {
+            @trigger_error('Passing a ValueExporter to the '.__CLASS__.' constructor is deprecated since version 2.8 and will be removed in 3.0. Give it an implementation of ClonerInterface instead.', E_USER_DEPRECATED);
+            $this->cloner = new VarCloner();
+        } else {
+            $this->cloner = $cloner ?: new VarCloner();
+        }
+
     }
 
     /**
@@ -47,17 +58,17 @@ class FormDataExtractor implements FormDataExtractorInterface
             'name' => $form->getName(),
             'type' => $form->getConfig()->getType()->getName(),
             'type_class' => get_class($form->getConfig()->getType()->getInnerType()),
-            'synchronized' => $this->valueExporter->exportValue($form->isSynchronized()),
+            'synchronized' => $this->exportValue($form->isSynchronized()),
             'passed_options' => array(),
             'resolved_options' => array(),
         );
 
         foreach ($form->getConfig()->getAttribute('data_collector/passed_options', array()) as $option => $value) {
-            $data['passed_options'][$option] = $this->valueExporter->exportValue($value);
+            $data['passed_options'][$option] = $this->exportValue($value);
         }
 
         foreach ($form->getConfig()->getOptions() as $option => $value) {
-            $data['resolved_options'][$option] = $this->valueExporter->exportValue($value);
+            $data['resolved_options'][$option] = $this->exportValue($value);
         }
 
         ksort($data['passed_options']);
@@ -73,17 +84,17 @@ class FormDataExtractor implements FormDataExtractorInterface
     {
         $data = array(
             'default_data' => array(
-                'norm' => $this->valueExporter->exportValue($form->getNormData()),
+                'norm' => $this->exportValue($form->getNormData()),
             ),
             'submitted_data' => array(),
         );
 
         if ($form->getData() !== $form->getNormData()) {
-            $data['default_data']['model'] = $this->valueExporter->exportValue($form->getData());
+            $data['default_data']['model'] = $this->exportValue($form->getData());
         }
 
         if ($form->getViewData() !== $form->getNormData()) {
-            $data['default_data']['view'] = $this->valueExporter->exportValue($form->getViewData());
+            $data['default_data']['view'] = $this->exportValue($form->getViewData());
         }
 
         return $data;
@@ -96,17 +107,17 @@ class FormDataExtractor implements FormDataExtractorInterface
     {
         $data = array(
             'submitted_data' => array(
-                'norm' => $this->valueExporter->exportValue($form->getNormData()),
+                'norm' => $this->exportValue($form->getNormData()),
             ),
             'errors' => array(),
         );
 
         if ($form->getViewData() !== $form->getNormData()) {
-            $data['submitted_data']['view'] = $this->valueExporter->exportValue($form->getViewData());
+            $data['submitted_data']['view'] = $this->exportValue($form->getViewData());
         }
 
         if ($form->getData() !== $form->getNormData()) {
-            $data['submitted_data']['model'] = $this->valueExporter->exportValue($form->getData());
+            $data['submitted_data']['model'] = $this->exportValue($form->getData());
         }
 
         foreach ($form->getErrors() as $error) {
@@ -123,10 +134,10 @@ class FormDataExtractor implements FormDataExtractorInterface
             while (null !== $cause) {
                 if ($cause instanceof ConstraintViolationInterface) {
                     $errorData['trace'][] = array(
-                        'class' => $this->valueExporter->exportValue(get_class($cause)),
-                        'root' => $this->valueExporter->exportValue($cause->getRoot()),
-                        'path' => $this->valueExporter->exportValue($cause->getPropertyPath()),
-                        'value' => $this->valueExporter->exportValue($cause->getInvalidValue()),
+                        'class' => $this->exportValue(get_class($cause)),
+                        'root' => $this->exportValue($cause->getRoot()),
+                        'path' => $this->exportValue($cause->getPropertyPath()),
+                        'value' => $this->exportValue($cause->getInvalidValue()),
                     );
 
                     $cause = method_exists($cause, 'getCause') ? $cause->getCause() : null;
@@ -136,8 +147,8 @@ class FormDataExtractor implements FormDataExtractorInterface
 
                 if ($cause instanceof \Exception) {
                     $errorData['trace'][] = array(
-                        'class' => $this->valueExporter->exportValue(get_class($cause)),
-                        'message' => $this->valueExporter->exportValue($cause->getMessage()),
+                        'class' => $this->exportValue(get_class($cause)),
+                        'message' => $this->exportValue($cause->getMessage()),
                     );
 
                     $cause = $cause->getPrevious();
@@ -153,7 +164,7 @@ class FormDataExtractor implements FormDataExtractorInterface
             $data['errors'][] = $errorData;
         }
 
-        $data['synchronized'] = $this->valueExporter->exportValue($form->isSynchronized());
+        $data['synchronized'] = $this->exportValue($form->isSynchronized());
 
         return $data;
     }
@@ -176,7 +187,7 @@ class FormDataExtractor implements FormDataExtractorInterface
         }
 
         foreach ($view->vars as $varName => $value) {
-            $data['view_vars'][$varName] = $this->valueExporter->exportValue($value);
+            $data['view_vars'][$varName] = $this->exportValue($value);
         }
 
         ksort($data['view_vars']);
@@ -200,5 +211,21 @@ class FormDataExtractor implements FormDataExtractorInterface
         }
 
         return $id;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return string
+     */
+    private function exportValue($value)
+    {
+        $dump = fopen('php://memory', 'r+b');
+        $dumper = new HtmlDumper($dump);
+
+        $dumper->dump($this->cloner->cloneVar($value));
+        rewind($dump);
+
+        return stream_get_contents($dump);
     }
 }

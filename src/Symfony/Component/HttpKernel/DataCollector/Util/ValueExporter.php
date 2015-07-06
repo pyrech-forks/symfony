@@ -13,6 +13,8 @@ namespace Symfony\Component\HttpKernel\DataCollector\Util;
 
 /**
  * @author Bernhard Schussek <bschussek@gmail.com>
+ *
+ * @deprecated since version 2.8, to be removed in 3.0.
  */
 class ValueExporter
 {
@@ -27,6 +29,8 @@ class ValueExporter
      */
     public function exportValue($value, $depth = 1, $deep = false)
     {
+        @trigger_error('The '.__CLASS__.' class is deprecated since version 2.8 and will be removed in 3.0. Use the VarDumper component instead.', E_USER_DEPRECATED);
+
         if (is_object($value)) {
             if ($value instanceof \DateTime || $value instanceof \DateTimeInterface) {
                 return sprintf('Object(%s) - %s', get_class($value), $value->format(\DateTime::ISO8601));

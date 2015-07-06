@@ -59,7 +59,7 @@ class FormDataExtractorTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         $this->valueExporter = new FormDataExtractorTest_SimpleValueExporter();
-        $this->dataExtractor = new FormDataExtractor($this->valueExporter);
+        $this->dataExtractor = new FormDataExtractor($this->valueExporter); // @todo remove valueExporter
         $this->dispatcher = $this->getMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
         $this->factory = $this->getMock('Symfony\Component\Form\FormFactoryInterface');
     }

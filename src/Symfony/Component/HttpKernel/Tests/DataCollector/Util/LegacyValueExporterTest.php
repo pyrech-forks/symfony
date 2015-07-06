@@ -13,7 +13,10 @@ namespace Symfony\Component\HttpKernel\Tests\DataCollector\Util;
 
 use Symfony\Component\HttpKernel\DataCollector\Util\ValueExporter;
 
-class ValueExporterTest extends \PHPUnit_Framework_TestCase
+/**
+ * @group legacy
+ */
+class LegacyValueExporterTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * @var ValueExporter

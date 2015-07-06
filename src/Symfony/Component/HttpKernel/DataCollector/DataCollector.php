@@ -12,6 +12,9 @@
 namespace Symfony\Component\HttpKernel\DataCollector;
 
 use Symfony\Component\HttpKernel\DataCollector\Util\ValueExporter;
+use Symfony\Component\VarDumper\Cloner\ClonerInterface;
+use Symfony\Component\VarDumper\Cloner\VarCloner;
+use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 
 /**
  * DataCollector.
@@ -26,9 +29,17 @@ abstract class DataCollector implements DataCollectorInterface, \Serializable
     protected $data = array();
 
     /**
-     * @var ValueExporter
+     * @var ClonerInterface
      */
-    private $valueExporter;
+    private $cloner;
+
+    /**
+     * Constructs a new data extractor.
+     */
+    public function __construct(ClonerInterface $cloner = null)
+    {
+        $this->cloner = $cloner ?: new VarCloner();
+    }
 
     public function serialize()
     {
@@ -49,10 +60,12 @@ abstract class DataCollector implements DataCollectorInterface, \Serializable
      */
     protected function varToString($var)
     {
-        if (null === $this->valueExporter) {
-            $this->valueExporter = new ValueExporter();
-        }
+        $dump = fopen('php://memory', 'r+b');
+        $dumper = new HtmlDumper($dump);
 
-        return $this->valueExporter->exportValue($var);
+        $dumper->dump($this->cloner->cloneVar($var));
+        rewind($dump);
+
+        return stream_get_contents($dump);
     }
 }
