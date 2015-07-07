@@ -9,7 +9,7 @@
         {% for key in bag.keys|sort %}
             <tr>
                 <th>{{ key }}</th>
-                <td><pre>{{ dump(bag.get(key)) }}</pre></td>
+                <td>{{ dump(bag.get(key)) }}</td>
             </tr>
         {% endfor %}
     </tbody>

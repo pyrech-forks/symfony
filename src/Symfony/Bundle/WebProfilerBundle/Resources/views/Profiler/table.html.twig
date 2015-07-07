@@ -9,7 +9,7 @@
         {% for key in data|keys|sort %}
             <tr>
                 <th>{{ key }}</th>
-                <td><pre>{{ dump(data[key]) }}</pre></td>
+                <td>{{ dump(data[key]) }}</td>
             </tr>
         {% endfor %}
     </tbody>

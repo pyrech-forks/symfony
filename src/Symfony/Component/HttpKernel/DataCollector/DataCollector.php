@@ -33,14 +33,6 @@ abstract class DataCollector implements DataCollectorInterface, \Serializable
      */
     private $cloner;
 
-    /**
-     * Constructs a new data extractor.
-     */
-    public function __construct(ClonerInterface $cloner = null)
-    {
-        $this->cloner = $cloner ?: new VarCloner();
-    }
-
     public function serialize()
     {
         return serialize($this->data);
@@ -60,6 +52,10 @@ abstract class DataCollector implements DataCollectorInterface, \Serializable
      */
     protected function varToString($var)
     {
+        if (null === $this->cloner) {
+            $this->cloner = new VarCloner();
+        }
+
         $dump = fopen('php://memory', 'r+b');
         $dumper = new HtmlDumper($dump);
 
